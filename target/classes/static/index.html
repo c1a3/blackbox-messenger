@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-on-1 Chat Demo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+
+    <div id="login-container" class="container">
+        <h1>Login to Chat</h1>
+        <p>Enter your name (Alice, Bob, or Charlie)</p>
+        <input type="text" id="username-input" placeholder="Your Name" autocomplete="off" />
+        <button id="login-button">Login</button>
+        <p id="login-error" class="error-message"></p>
+    </div>
+
+    <div id="chat-container" class="container hidden">
+        <div class="contact-list">
+            <div class="header">
+                <h3>Contacts</h3>
+                <span id="current-user-display"></span>
+            </div>
+            <ul id="contacts">
+                </ul>
+        </div>
+        <div class="chat-window">
+            <div id="chat-placeholder">
+                <p>Select a contact to start chatting</p>
+            </div>
+            <div id="active-chat" class="hidden">
+                <div class="chat-header">
+                    <h3 id="active-contact-name"></h3>
+                </div>
+                <div class="message-list" id="message-list">
+                    </div>
+                <form id="message-form" class="message-input-area">
+                    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                    <button type="submit">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
