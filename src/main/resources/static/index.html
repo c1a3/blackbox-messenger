@@ -3,48 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1-on-1 Chat Demo</title>
+    <title>BlackBox Messenger</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
 
-    <div id="login-container" class="container">
-        <h1>Login to Chat</h1>
-        <p>Enter your name (Alice, Bob, or Charlie)</p>
-        <input type="text" id="username-input" placeholder="Your Name" autocomplete="off" />
-        <button id="login-button">Login</button>
-        <p id="login-error" class="error-message"></p>
+    <div id="auth-container" class="container">
+        <div id="login-form-container">
+            <h2>Welcome to BlackBox</h2>
+            <p>Sign in to continue</p>
+            <form id="login-form">
+                <input type="text" id="login-session-id" placeholder="Your 15-Digit Session ID" required autocomplete="username">
+                <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password">
+                <button type="submit">Sign In</button>
+            </form>
+            <p class="form-switch">New here? <a href="#" id="show-signup">Create an account</a></p>
+            <p id="auth-error" class="error-message"></p>
+        </div>
+
+        <div id="signup-form-container" class="hidden">
+            <h2>Create Your Account</h2>
+            <p>Your unique Session ID will be generated for you.</p>
+            <form id="signup-form">
+                <input type="text" id="signup-display-name" placeholder="Display Name" required>
+                <input type="password" id="signup-password" placeholder="Create a Password" required autocomplete="new-password">
+                <button type="submit">Create Account</button>
+            </form>
+            <p class="form-switch">Already have an account? <a href="#" id="show-login">Sign in</a></p>
+        </div>
+        
+        <div id="signup-success-container" class="hidden">
+            <h2><i class="fa-solid fa-check-circle"></i> Account Created!</h2>
+            <p>Please save your Session ID. You will need it to log in.</p>
+            <div class="session-id-display">
+                <strong id="new-session-id-display"></strong>
+                <button id="copy-session-id-btn" title="Copy ID"><i class="fa-solid fa-copy"></i></button>
+            </div>
+            <button id="proceed-to-login-btn">Proceed to Login</button>
+        </div>
     </div>
 
     <div id="chat-container" class="container hidden">
-        <div class="contact-list">
+        <div class="sidebar">
             <div class="header">
-                <h3>Contacts</h3>
-                <span id="current-user-display"></span>
+                <div class="user-profile">
+                    <strong id="current-user-display"></strong>
+                    <span id="current-user-session-id"></span>
+                </div>
+                <div class="actions">
+                    <button id="theme-toggle" title="Toggle Theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                    <button id="delete-account-btn" title="Delete Account"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
             </div>
-            <ul id="contacts">
-                </ul>
+            <div class="contact-list">
+                <ul id="contacts"></ul>
+            </div>
         </div>
         <div class="chat-window">
             <div id="chat-placeholder">
-                <p>Select a contact to start chatting</p>
+                <i class="fa-solid fa-comments"></i>
+                <p>Select a contact to start messaging</p>
             </div>
             <div id="active-chat" class="hidden">
                 <div class="chat-header">
                     <h3 id="active-contact-name"></h3>
                 </div>
-                <div class="message-list" id="message-list">
+                <div class="message-list" id="message-list"></div>
+                <div class="message-input-area">
+                    <div id="destruct-timer-popup" class="hidden">
+                        <button data-time="5">5s</button>
+                        <button data-time="10">10s</button>
+                        <button data-time="60">1m</button>
+                        <button data-time="0" class="cancel">Off</button>
                     </div>
-                <form id="message-form" class="message-input-area">
-                    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit">Send</button>
-                </form>
+                    <button id="destruct-timer-btn" title="Self-destruct timer"><i class="fa-solid fa-clock"></i></button>
+                    <form id="message-form">
+                        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>

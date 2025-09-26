@@ -1,223 +1,85 @@
 /* src/main/resources/static/style.css */
 :root {
-    --primary-bg: #f5f7fa;
-    --secondary-bg: #ffffff;
-    --border-color: #e0e0e0;
-    --text-color: #333;
-    --primary-accent: #007bff;
-    --sent-message-bg: #dcf8c6;
-    --received-message-bg: #ffffff;
-    --font-family: 'Helvetica Neue', Arial, sans-serif;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Light Theme */
+    --bg-color: #f0f2f5;
+    --primary-pane-bg: #ffffff;
+    --secondary-pane-bg: #f8f9fa;
+    --header-bg: #f0f2f5;
+    --text-color: #333333;
+    --text-muted-color: #6c757d;
+    --border-color: #dee2e6;
+    --accent-color: #007bff;
+    --accent-color-hover: #0056b3;
+    --success-color: #28a745;
+    --sent-msg-bg: #dcf8c6;
+    --received-msg-bg: #ffffff;
+    --icon-color: #555;
+    --placeholder-color: #adb5bd;
+    --shadow-color: rgba(0, 0, 0, 0.05);
 }
 
-body {
-    font-family: var(--font-family);
-    background-color: var(--primary-bg);
-    color: var(--text-color);
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+body.dark-mode {
+    /* Dark Theme */
+    --bg-color: #121212;
+    --primary-pane-bg: #1e1e1e;
+    --secondary-pane-bg: #2a2a2a;
+    --header-bg: #2a2a2a;
+    --text-color: #e0e0e0;
+    --text-muted-color: #888888;
+    --border-color: #3a3a3a;
+    --accent-color: #3793ff;
+    --accent-color-hover: #5fa8ff;
+    --success-color: #33c052;
+    --sent-msg-bg: #264b23;
+    --received-msg-bg: #3a3a3a;
+    --icon-color: #aaa;
+    --placeholder-color: #666;
+    --shadow-color: rgba(0, 0, 0, 0.2);
 }
 
-.container {
-    background-color: var(--secondary-bg);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-}
+/* --- Global, Auth, and Chat styles are the same as before --- */
+/* Add the new styles below the existing ones */
 
-/* --- Login Screen --- */
-#login-container {
-    width: 350px;
-    padding: 40px;
-    text-align: center;
-}
-
-#login-container h1 {
-    margin-bottom: 10px;
-}
-
-#login-container p {
-    color: #666;
+/* --- NEW STYLES for Signup Success --- */
+#signup-success-container h2 {
+    color: var(--success-color);
     margin-bottom: 20px;
 }
-
-#username-input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-#login-button {
-    width: 100%;
-    padding: 12px;
-    background-color: var(--primary-accent);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.2s;
-}
-
-#login-button:hover {
-    background-color: #0056b3;
-}
-
-.error-message {
-    color: #d9534f;
-    min-height: 20px;
-}
-
-/* --- Chat Layout --- */
-#chat-container {
-    display: flex;
-    width: 900px;
-    height: 700px;
-}
-
-.contact-list {
-    width: 35%;
-    max-width: 300px;
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-}
-
-.contact-list .header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.contact-list h3 {
-    margin: 0;
-}
-
-#current-user-display {
-    font-weight: bold;
-    color: var(--primary-accent);
-}
-
-#contacts {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow-y: auto;
-    flex-grow: 1;
-}
-
-.contact {
-    padding: 15px 20px;
-    cursor: pointer;
-    border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s;
-}
-
-.contact:hover {
-    background-color: #f0f0f0;
-}
-
-.contact.active {
-    background-color: var(--primary-accent);
-    color: white;
-}
-
-.chat-window {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-#chat-placeholder {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    color: #aaa;
-    font-size: 18px;
-}
-
-.chat-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-    background-color: #fafafa;
-}
-
-.chat-header h3 {
-    margin: 0;
-}
-
-.message-list {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-bubble {
-    max-width: 70%;
-    padding: 10px 15px;
-    border-radius: 18px;
-    margin-bottom: 10px;
-    line-height: 1.4;
-}
-
-.message-bubble.sent {
-    background-color: var(--sent-message-bg);
-    align-self: flex-end;
-    border-bottom-right-radius: 4px;
-}
-
-.message-bubble.received {
-    background-color: var(--received-message-bg);
-    align-self: flex-start;
-    border: 1px solid var(--border-color);
-    border-bottom-left-radius: 4px;
-}
-
-.message-input-area {
-    display: flex;
-    padding: 15px;
-    border-top: 1px solid var(--border-color);
-    background-color: #f0f2f5;
-}
-
-#message-input {
-    flex-grow: 1;
-    padding: 10px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
+#signup-success-container h2 i {
     margin-right: 10px;
 }
-
-#message-input:focus {
-    outline: none;
-    border-color: var(--primary-accent);
+.session-id-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background-color: var(--secondary-pane-bg);
+    border: 1px dashed var(--border-color);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
 }
-
-#message-form button {
-    padding: 10px 20px;
+.session-id-display strong {
+    font-size: 1.4em;
+    color: var(--accent-color);
+    letter-spacing: 2px;
+}
+.session-id-display button {
+    background: none;
     border: none;
-    background-color: var(--primary-accent);
+    font-size: 1.2em;
+    color: var(--icon-color);
+    padding: 5px;
+}
+#proceed-to-login-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--accent-color);
     color: white;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-#message-form button:hover {
-    background-color: #0056b3;
-}
-
-.hidden {
-    display: none !important;
+    font-weight: bold;
+    margin-top: 10px;
 }

@@ -4,8 +4,12 @@ package com.example.chatdemo.model;
 import java.time.Instant;
 
 public record ChatMessage(
-    String sender,
-    String receiver,
+    String messageId,
+    String senderId,
+    String receiverId,
+    String senderDisplayName,
     String content,
-    Instant timestamp
+    Instant timestamp,
+    MessageStatus status,
+    Instant destructTime // Can be null
 ) {}

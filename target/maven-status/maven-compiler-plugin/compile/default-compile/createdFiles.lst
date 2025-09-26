@@ -1,6 +1,12 @@
+com/example/chatdemo/ChatDemoApplication.class
+com/example/chatdemo/model/MessageStatus.class
+com/example/chatdemo/model/User.class
+com/example/chatdemo/config/SchedulingConfig.class
+com/example/chatdemo/model/StatusUpdate.class
 com/example/chatdemo/service/ChatService.class
 com/example/chatdemo/model/ChatMessage.class
-com/example/chatdemo/ChatDemoApplication.class
+com/example/chatdemo/controller/UserController.class
 com/example/chatdemo/controller/ChatController.class
 com/example/chatdemo/config/CorsConfig.class
+com/example/chatdemo/service/UserService.class
 com/example/chatdemo/config/WebSocketConfig.class
