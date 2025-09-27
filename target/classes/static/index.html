@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlackBox Messenger</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
-
     <div id="auth-container" class="container">
         <div id="login-form-container">
             <h2>Welcome to BlackBox</h2>
@@ -23,7 +22,6 @@
             <p class="form-switch">New here? <a href="#" id="show-signup">Create an account</a></p>
             <p id="auth-error" class="error-message"></p>
         </div>
-
         <div id="signup-form-container" class="hidden">
             <h2>Create Your Account</h2>
             <p>Your unique Session ID will be generated for you.</p>
@@ -34,7 +32,6 @@
             </form>
             <p class="form-switch">Already have an account? <a href="#" id="show-login">Sign in</a></p>
         </div>
-        
         <div id="signup-success-container" class="hidden">
             <h2><i class="fa-solid fa-check-circle"></i> Account Created!</h2>
             <p>Please save your Session ID. You will need it to log in.</p>
@@ -43,6 +40,9 @@
                 <button id="copy-session-id-btn" title="Copy ID"><i class="fa-solid fa-copy"></i></button>
             </div>
             <button id="proceed-to-login-btn">Proceed to Login</button>
+        </div>
+        <div id="auth-loader" class="loader-container hidden">
+            <div class="loader"></div>
         </div>
     </div>
 
@@ -55,6 +55,7 @@
                 </div>
                 <div class="actions">
                     <button id="theme-toggle" title="Toggle Theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                    <button id="logout-btn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
                     <button id="delete-account-btn" title="Delete Account"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>
@@ -71,7 +72,11 @@
                 <div class="chat-header">
                     <h3 id="active-contact-name"></h3>
                 </div>
-                <div class="message-list" id="message-list"></div>
+                <div class="message-list" id="message-list">
+                    <div id="empty-chat-placeholder" class="placeholder-message hidden">
+                        <p>No messages yet. Say hello!</p>
+                    </div>
+                </div>
                 <div class="message-input-area">
                     <div id="destruct-timer-popup" class="hidden">
                         <button data-time="5">5s</button>
@@ -82,12 +87,15 @@
                     <button id="destruct-timer-btn" title="Self-destruct timer"><i class="fa-solid fa-clock"></i></button>
                     <form id="message-form">
                         <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
-                        <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                        <button type="submit">SEND</button>
                     </form>
                 </div>
             </div>
+             <div id="chat-loader" class="loader-container hidden">
+                <div class="loader"></div>
+            </div>
         </div>
     </div>
-    <script src="app.js"></script>
+    <script src="/app.js"></script>
 </body>
 </html>
