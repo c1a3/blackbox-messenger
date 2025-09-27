@@ -1,4 +1,3 @@
-// src/main/java/com/example/chatdemo/config/WebSocketConfig.java
 package com.example.chatdemo.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +14,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/app");
-        // This prefix will be used for messages directed to a specific user
         config.setUserDestinationPrefix("/user");
     }
 
