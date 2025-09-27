@@ -14,3 +14,5 @@
    ```
    mvn spring-boot:run
    ```
+
+4. Open your browser and ```http://localhost:8080``` 
