@@ -13,18 +13,12 @@ NODE_ENV=development
 ```
 
 ### Build the app
-
+`/root directory`
 ```shell
-cd frontend
-npm run build
-```
-```shell
-cd backend
 npm run build
 ```
 
-
-### Start the app
+### Initialize the app
 
 ```shell
 cd frontend
