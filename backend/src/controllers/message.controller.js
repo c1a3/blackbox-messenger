@@ -76,8 +76,7 @@ export const sendMessage = async (req, res) => {
 
     if (scheduledSendTime) {
         try {
-            // *** The frontend sends a standard ISO string (UTC). Parse it directly. ***
-            // const inputFormat = "YYYY-MM-DDTHH:mm"; // REMOVED THIS LINE
+            // The frontend sends a standard ISO string (UTC). Parse it directly.
             const scheduledMoment = moment(scheduledSendTime); // This correctly parses the ISO string
 
             if (!scheduledMoment.isValid()) {
@@ -244,18 +243,40 @@ export const deleteMessage = async (req, res) => {
 // --- Function to schedule pending messages on server start ---
 export const schedulePendingMessages = async () => {
     try {
+        const now = new Date();
+        // Find ALL pending messages that haven't been sent
         const pendingMessages = await Message.find({
             isScheduled: true,
             isSent: false,
-            scheduledSendTime: { $gte: new Date() } // Find future pending messages only
+            // scheduledSendTime: { $gte: new Date() } // <-- REMOVED THIS FILTER
         }).sort({ scheduledSendTime: 1 });
 
-        console.log(`Found ${pendingMessages.length} pending scheduled messages to reschedule.`);
+        console.log(`Found ${pendingMessages.length} pending scheduled messages to process.`);
 
         pendingMessages.forEach(message => {
-            if (message.scheduledSendTime && message.scheduledSendTime > new Date()) {
+            if (!message.scheduledSendTime) {
+                 console.log(`Skipping message ${message._id}: No scheduledSendTime found.`);
+                 return; // Skip if time is somehow missing
+            }
+            
+            // Check if the scheduled time is in the past (or very close to now, e.g., 10s buffer)
+            if (message.scheduledSendTime <= new Date(now.getTime() + 10000)) { 
+                console.log(`Immediately sending overdue message ${message._id} scheduled for ${message.scheduledSendTime.toISOString()}`);
+                // Send it right now in an async IIFE
+                (async () => {
+                    try {
+                        message.isSent = true;
+                        message.isScheduled = false;
+                        await message.save();
+                        await deliverMessage(message);
+                    } catch (err) {
+                        console.error(`Error sending overdue message ${message._id}:`, err.message);
+                    }
+                })();
+            } else {
+                // It's in the future, schedule it normally
                 console.log(`Rescheduling message ${message._id} for ${message.scheduledSendTime.toISOString()}`);
-                const job = schedule.scheduleJob(message._id.toString(), message.scheduledSendTime, async () => { // Use ID as job name
+                const job = schedule.scheduleJob(message._id.toString(), message.scheduledSendTime, async () => { 
                     console.log(`Executing rescheduled job for message ${message._id} at ${new Date()}`);
                     const msgToSend = await Message.findOne({ _id: message._id, isScheduled: true, isSent: false });
                     if (msgToSend) {
@@ -271,12 +292,10 @@ export const schedulePendingMessages = async () => {
                 if (!job) {
                      console.error(`Failed to reschedule job for message ${message._id}`);
                 }
-            } else {
-                 console.log(`Skipping reschedule for message ${message._id}: Time is invalid or in the past: ${message.scheduledSendTime}`);
             }
         });
 
     } catch (error) {
         console.error("Error rescheduling pending messages:", error.message);
     }
-}; 
+};
