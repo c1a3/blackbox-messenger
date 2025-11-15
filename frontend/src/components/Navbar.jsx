@@ -26,17 +26,7 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
-            {herosection && (
-              <>
-                <a
-                  href="#services"
-                  className="btn btn-sm gap-2 transition-colors smooth-scroll duration-300"
-                >
-                  <span>Services</span>
-                </a>
-              </>
-            )}
+           <div className="flex items-center gap-2">
             <Link
               to={"/settings"}
               className={`

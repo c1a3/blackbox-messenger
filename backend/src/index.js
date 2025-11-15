@@ -42,7 +42,7 @@ if (process.env.NODE_ENV === "production") {
 
 server.listen(PORT, async () => { // Make listener async
   console.log("Server is running on PORT:" + PORT);
-  await connectDB(); // Wait for DB connection */
+  await connectDB(); // Wait for DB connection
   // +++ Schedule pending messages after DB connection +++
   await schedulePendingMessages();
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++

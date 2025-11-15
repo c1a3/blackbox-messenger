@@ -76,9 +76,9 @@ export const sendMessage = async (req, res) => {
 
     if (scheduledSendTime) {
         try {
-            // *** Specify the input format to ensure correct parsing ***
-            const inputFormat = "YYYY-MM-DDTHH:mm"; // Matches datetime-local input
-            const scheduledMoment = moment.tz(scheduledSendTime, inputFormat, timeZone);
+            // *** The frontend sends a standard ISO string (UTC). Parse it directly. ***
+            // const inputFormat = "YYYY-MM-DDTHH:mm"; // REMOVED THIS LINE
+            const scheduledMoment = moment(scheduledSendTime); // This correctly parses the ISO string
 
             if (!scheduledMoment.isValid()) {
                  console.error(`Invalid date format or value received: ${scheduledSendTime}`);
@@ -279,4 +279,4 @@ export const schedulePendingMessages = async () => {
     } catch (error) {
         console.error("Error rescheduling pending messages:", error.message);
     }
-};
+}; 
