@@ -84,8 +84,10 @@ export const sendMessage = async (req, res) => {
                  return res.status(400).json({ error: "Invalid scheduled time format or value provided" });
             }
 
-            // Use isSameOrBefore for comparison
-            if (scheduledMoment.isSameOrBefore(moment())) {
+            // *** FIX FOR LATENCY ***
+            // Check if time is in the past, allowing a 2-second buffer for latency
+            if (scheduledMoment.isSameOrBefore(moment().subtract(2, 'seconds'))) {
+            // *** END FIX ***
                 console.warn(`Scheduled time ${scheduledSendTime} (${timeZone}) is in the past.`);
                 return res.status(400).json({ error: "Scheduled time must be in the future." });
             }
@@ -248,7 +250,6 @@ export const schedulePendingMessages = async () => {
         const pendingMessages = await Message.find({
             isScheduled: true,
             isSent: false,
-            // scheduledSendTime: { $gte: new Date() } // <-- REMOVED THIS FILTER
         }).sort({ scheduledSendTime: 1 });
 
         console.log(`Found ${pendingMessages.length} pending scheduled messages to process.`);
