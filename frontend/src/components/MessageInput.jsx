@@ -33,7 +33,7 @@ const MessageInput = () => {
     reader.onloadend = () => {
       setImagePreview(reader.result);
     };
-    reader.readAsDataURL(file);
+    reader.readDataAsDataURL(file);
   };
 
   const removeImage = () => {
@@ -49,7 +49,20 @@ const MessageInput = () => {
     // Validate schedule time if set
     let sendTime = null;
     if (showScheduler && scheduleDateTime) {
-      sendTime = new Date(scheduleDateTime);
+      
+      // *** FIX FOR BROWSER INCONSISTENCY ***
+      // new Date("YYYY-MM-DDTHH:mm") is ambiguous.
+      // We must first create a date object from the string, which Firefox
+      // correctly treats as local time, and *then* get its ISO string.
+      // But to be 100% safe, we parse the components.
+      
+      // A more robust way to parse the "datetime-local" string as local time
+      const parts = scheduleDateTime.split(/[-T:]/); // [YYYY, MM, DD, HH, mm]
+      // Note: Month is 0-indexed in JS Date, so subtract 1
+      const localDate = new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]);
+      sendTime = localDate;
+      // *** END FIX ***
+
       if (isNaN(sendTime.getTime()) || sendTime <= new Date()) {
         toast.error("Please select a valid future date and time for scheduling.");
         return;
@@ -62,7 +75,7 @@ const MessageInput = () => {
         image: imagePreview,
       };
       if (sendTime) {
-        payload.scheduledSendTime = sendTime.toISOString(); // Send ISO string
+        payload.scheduledSendTime = sendTime.toISOString(); // Send unambiguous ISO string
       }
 
       await sendMessage(payload);
