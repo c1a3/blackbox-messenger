@@ -53,7 +53,6 @@ export const useChatStore = create((set, get) => ({
         // (handling both sender and receiver updates the same way).
         if (res.status === 201) {
             // Optional: Can still add optimistically here if needed, but socket handles it
-            // set({ messages: [...get().messages, res.data] });
              console.log("Message sent immediately, waiting for socket confirmation.");
         } else if (res.status === 202) {
             // Message scheduled confirmation already shown via toast in MessageInput
@@ -63,7 +62,11 @@ export const useChatStore = create((set, get) => ({
 
     } catch (error) {
        console.error("Error sending/scheduling message:", error);
-       toast.error(error.response?.data?.message || "Failed to send/schedule message");
+       // *** THIS IS THE FIX ***
+       const errorMessage = error.response?.data?.message || "Failed to send/schedule message";
+       toast.error(errorMessage);
+       throw new Error(errorMessage); // Re-throw the error so the component can catch it
+       // **********************
     }
   },
 
