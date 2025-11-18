@@ -7,6 +7,7 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
   selectedUser: null,
+  selectedGroup: null, // New state for group
   isUsersLoading: false,
   isMessagesLoading: false,
 
@@ -27,7 +28,6 @@ export const useChatStore = create((set, get) => ({
     if (!userId) return;
     set({ isMessagesLoading: true, messages: [] });
     try {
-      // Fetch only messages that ARE sent (isSent: true is the default filter on backend now)
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
     } catch (error) {
@@ -38,42 +38,33 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  // Modified sendMessage action
   sendMessage: async (messageData) => {
-    const { selectedUser } = get(); // No need for 'messages' here
-    if (!selectedUser) return toast.error("No user selected");
+    const { selectedUser, selectedGroup } = get();
+    
+    if (!selectedUser && !selectedGroup) return toast.error("No chat selected");
+
+    const targetId = selectedGroup ? selectedGroup._id : selectedUser._id;
+    // Add isGroup flag if a group is selected
+    const payload = { ...messageData, isGroup: !!selectedGroup };
+
     try {
-        // Response will either be the sent message (201) or a scheduled confirmation (202)
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      const res = await axiosInstance.post(`/messages/send/${targetId}`, payload);
 
-        // If it was scheduled, the backend sends a 202 status and a confirmation.
-        // The actual message will arrive via socket later.
-        // If it was sent immediately (201), the message data is in res.data.
-        // We rely on the socket 'newMessage' event to add the message to the state for consistency
-        // (handling both sender and receiver updates the same way).
         if (res.status === 201) {
-            // Optional: Can still add optimistically here if needed, but socket handles it
-             console.log("Message sent immediately, waiting for socket confirmation.");
+             console.log("Message sent immediately");
         } else if (res.status === 202) {
-            // Message scheduled confirmation already shown via toast in MessageInput
-             console.log("Message scheduled confirmation received.");
-            // Optionally, you could add a temporary placeholder message here
+             console.log("Message scheduled");
         }
-
     } catch (error) {
        console.error("Error sending/scheduling message:", error);
-       // *** THIS IS THE FIX ***
        const errorMessage = error.response?.data?.message || "Failed to send/schedule message";
        toast.error(errorMessage);
-       throw new Error(errorMessage); // Re-throw the error so the component can catch it
-       // **********************
+       throw new Error(errorMessage);
     }
   },
 
-
   deleteMessage: async (messageId, deleteType) => {
      const currentAuthUserId = useAuthStore.getState().authUser._id;
-     // Optimistic update
      set((state) => ({
         messages: state.messages.map(msg => {
             if (msg._id === messageId) {
@@ -96,8 +87,9 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       console.error("Error deleting message:", error);
       toast.error(error.response?.data?.message || "Failed to delete message");
-       const { selectedUser } = get();
-       if (selectedUser) get().getMessages(selectedUser._id);
+       const { selectedUser, selectedGroup } = get();
+       const targetId = selectedGroup ? selectedGroup._id : (selectedUser ? selectedUser._id : null);
+       if(targetId) get().getMessages(targetId);
     }
   },
 
@@ -109,19 +101,30 @@ export const useChatStore = create((set, get) => ({
     socket.off("messageDeleted");
 
     socket.on("newMessage", (newMessage) => {
-       const { selectedUser: currentUser, messages } = get();
+       const { selectedUser, selectedGroup, messages } = get();
        const currentAuthUserId = useAuthStore.getState().authUser._id;
        const messageExists = messages.some(msg => msg._id === newMessage._id);
 
-        // Ensure message hasn't been processed already AND belongs to the current user/chat
        if (!messageExists) {
-            const isRelevantToSelectedChat = currentUser &&
-                    ((newMessage.senderId === currentAuthUserId && newMessage.receiverId === currentUser._id) ||
-                    (newMessage.receiverId === currentAuthUserId && newMessage.senderId === currentUser._id));
+            let isRelevantToSelectedChat = false;
+
+            if (selectedGroup) {
+                // Check if message belongs to this group
+                if (newMessage.groupId === selectedGroup._id) {
+                    isRelevantToSelectedChat = true;
+                }
+            } else if (selectedUser) {
+                // Check if message is a direct message with this user
+                // (and NOT a group message, i.e., groupId is undefined or null)
+                if (!newMessage.groupId && 
+                   ((newMessage.senderId === currentAuthUserId && newMessage.receiverId === selectedUser._id) ||
+                    (newMessage.receiverId === currentAuthUserId && newMessage.senderId === selectedUser._id))) {
+                    isRelevantToSelectedChat = true;
+                }
+            }
 
             if (isRelevantToSelectedChat) {
                 set((state) => ({
-                    // Check again inside set to prevent race conditions
                     messages: state.messages.some(msg => msg._id === newMessage._id)
                                 ? state.messages
                                 : [...state.messages, newMessage],
@@ -131,27 +134,38 @@ export const useChatStore = create((set, get) => ({
     });
 
     socket.on("messageDeleted", (deletionInfo) => {
-      const { messageId, deleteType, updatedText, senderId, receiverId } = deletionInfo;
+      const { messageId, deleteType, updatedText, senderId, receiverId, groupId } = deletionInfo;
       const currentAuthUserId = useAuthStore.getState().authUser._id;
-       if (senderId === currentAuthUserId || receiverId === currentAuthUserId) {
-            set((state) => ({
-                messages: state.messages.map((msg) => {
-                if (msg._id === messageId) {
-                    if (deleteType === "everyone") {
-                      return { ...msg, text: updatedText, image: null, deletedFor: [] };
-                    } else if (deleteType === "me") {
-                       const userToDeleteFor = senderId === currentAuthUserId ? senderId : receiverId;
-                       const deletedForArray = msg.deletedFor ? [...msg.deletedFor] : [];
-                       if (!deletedForArray.includes(userToDeleteFor)) {
-                           deletedForArray.push(userToDeleteFor);
-                       }
-                       return { ...msg, deletedFor: deletedForArray };
+      const { selectedUser, selectedGroup } = get();
+
+      // Check if the deletion event is relevant to the current open chat
+      let isRelevant = false;
+      if (selectedGroup && groupId === selectedGroup._id) {
+          isRelevant = true;
+      } else if (selectedUser && !groupId && (senderId === currentAuthUserId || receiverId === currentAuthUserId)) {
+          isRelevant = true;
+      }
+
+      if (isRelevant) {
+        set((state) => ({
+            messages: state.messages.map((msg) => {
+            if (msg._id === messageId) {
+                if (deleteType === "everyone") {
+                    return { ...msg, text: updatedText, image: null, deletedFor: [] };
+                } else if (deleteType === "me") {
+                    // Note: For 'me' deletion in groups, logic is same: append current user to deletedFor
+                    const userToDeleteFor = currentAuthUserId; 
+                    const deletedForArray = msg.deletedFor ? [...msg.deletedFor] : [];
+                    if (!deletedForArray.includes(userToDeleteFor)) {
+                        deletedForArray.push(userToDeleteFor);
                     }
+                    return { ...msg, deletedFor: deletedForArray };
                 }
-                return msg;
-                }),
-            }));
-       }
+            }
+            return msg;
+            }),
+        }));
+      }
     });
   },
 
@@ -164,13 +178,24 @@ export const useChatStore = create((set, get) => ({
   },
 
   setSelectedUser: (selectedUser) => {
-      set({ selectedUser });
+      set({ selectedUser, selectedGroup: null }); // Clear group if user selected
       if (selectedUser) {
           get().getMessages(selectedUser._id);
           get().subscribeToMessages();
       } else {
          set({ messages: [] });
-         get().unsubscribeFromMessages(); // Unsubscribe if no user is selected
+         get().unsubscribeFromMessages();
+      }
+  },
+
+  setSelectedGroup: (selectedGroup) => {
+      set({ selectedGroup, selectedUser: null }); // Clear user if group selected
+      if (selectedGroup) {
+          get().getMessages(selectedGroup._id);
+          get().subscribeToMessages();
+      } else {
+         set({ messages: [] });
+         get().unsubscribeFromMessages();
       }
   },
 }));

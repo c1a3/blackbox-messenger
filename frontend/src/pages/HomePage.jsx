@@ -6,7 +6,8 @@ import ChatContainer from "../components/ChatContainer";
 // import Footer from "../components/Footer";
 
 const HomePage = () => {
-  const { selectedUser } = useChatStore();
+  // Destructure selectedGroup as well
+  const { selectedUser, selectedGroup } = useChatStore();
 
   return (
     <>
@@ -16,7 +17,8 @@ const HomePage = () => {
             <div className="flex h-full rounded-lg overflow-hidden">
               <Sidebar />
 
-              {!selectedUser ? <NoChatSelected /> : <ChatContainer />}
+              {/* Update logic: Show ChatContainer if EITHER a user OR a group is selected */}
+              {!selectedUser && !selectedGroup ? <NoChatSelected /> : <ChatContainer />}
             </div>
           </div>
         </div>

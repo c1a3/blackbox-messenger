@@ -10,7 +10,12 @@ const messageSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // Not required if it's a group message
+    },
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      required: false,
     },
     text: {
       type: String,
@@ -25,28 +30,23 @@ const messageSchema = new mongoose.Schema(
         default: [],
       },
     ],
-    // +++ Add Scheduling Fields +++
     isScheduled: {
       type: Boolean,
       default: false,
     },
     scheduledSendTime: {
       type: Date,
-      index: true, // Index for faster querying by the scheduler
+      index: true,
     },
-    // Change default to handle scheduled messages correctly
     isSent: {
        type: Boolean,
-       default: true, // Will be overridden to false if scheduled
+       default: true,
     },
-    // +++++++++++++++++++++++++++++
   },
-  { timestamps: true } // createdAt will mark when it was scheduled/sent initially
+  { timestamps: true }
 );
 
-// Ensure index works well with isSent and isScheduled
 messageSchema.index({ isScheduled: 1, isSent: 1, scheduledSendTime: 1 });
-
 
 const Message = mongoose.model("Message", messageSchema);
 
