@@ -6,12 +6,14 @@ import { useChatStore } from "../store/useChatStore";
 import { Video, VideoOff, Mic, MicOff, PhoneOff, Phone, Loader2, X } from "lucide-react";
 import toast from "react-hot-toast";
 
-// STUN servers
+// --- CRITICAL: ICE SERVERS FOR DEPLOYMENT ---
+// STUN works for some, but TURN is needed for most real-world connections.
+// 1. Go to https://www.metered.ca/tools/openrelay/ (or similar free TURN provider)
+// 2. Create a free account and get your TURN credentials.
+// 3. Replace this array with the one they provide.
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  { urls: 'stun:stun.qa.qq.com:3478' },
-  { urls: 'stun:stun.ipv4.google.com:19302' }
+  { urls: 'stun:global.stun.twilio.com:3478' }
 ];
 
 const VideoCallModal = () => {
@@ -52,7 +54,7 @@ const VideoCallModal = () => {
       return stream;
     } catch (err) {
       console.error("Failed to get media:", err);
-      toast.error("Camera access denied. Check permissions!");
+      toast.error("Camera access denied. Please check browser permissions.");
       setIsCallModalOpen(false); 
       return null;
     }
@@ -107,7 +109,7 @@ const VideoCallModal = () => {
       try {
           const peer = new Peer({
             initiator: true,
-            trickle: false,
+            trickle: false, // Keep false for simplicity unless you implement full trickle logic
             stream: myStream,
             config: { iceServers: ICE_SERVERS }
           });
@@ -130,7 +132,7 @@ const VideoCallModal = () => {
 
           peer.on("error", (err) => {
               console.error("Peer Error (Caller):", err);
-              // Don't close immediately on error, allows retry
+              toast.error(`Call Error: ${err.message || "Connection Failed"}`);
           });
 
           socket.on("callAccepted", (signal) => {
@@ -152,7 +154,6 @@ const VideoCallModal = () => {
     console.log("Answering Call...");
     setConnectionStatus("connecting");
     
-    // User gesture media request
     const stream = await getMediaStream();
     if (!stream) return; 
 
@@ -176,7 +177,10 @@ const VideoCallModal = () => {
           setConnectionStatus("connected");
         });
 
-        peer.on("error", (err) => console.error("Peer Error (Receiver):", err));
+        peer.on("error", (err) => {
+             console.error("Peer Error (Receiver):", err);
+             toast.error(`Call Error: ${err.message || "Connection Failed"}`);
+        });
 
         peer.signal(callerSignal);
         connectionRef.current = peer;
@@ -185,10 +189,9 @@ const VideoCallModal = () => {
     }
   };
 
-  // 7. End Call (Robust)
+  // 7. End Call
   const leaveCall = () => {
-    // Calculate target BEFORE clearing state
-    // If I have a callerId in store, I was the receiver. Otherwise check selectedUser (Caller)
+    // 1. Capture ID BEFORE clearing state
     const targetId = callerId || selectedUser?._id;
     
     console.log("Ending call. Notifying:", targetId);
@@ -198,9 +201,11 @@ const VideoCallModal = () => {
     }
 
     if (connectionRef.current) connectionRef.current.destroy();
+    
+    // 2. Clear State
     endCallState();
     
-    // Force reload to clear WebRTC state completely
+    // 3. Hard Reset to clear all WebRTC tracks/buffers
     window.location.reload(); 
   };
 
@@ -235,10 +240,18 @@ const VideoCallModal = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
       <div className="bg-base-300 w-full max-w-4xl h-[80vh] md:h-auto md:aspect-video rounded-2xl overflow-hidden flex flex-col shadow-2xl relative border border-base-content/10">
         
-        {/* Fallback Close Button (Top Right) */}
+        {/* Top Bar with Status */}
+        <div className="absolute top-4 left-4 z-50 flex gap-2">
+            <div className={`badge ${connectionStatus === 'connected' ? 'badge-success' : 'badge-warning'} gap-2`}>
+                {connectionStatus === 'connected' ? 'Secured' : 'Connecting...'}
+            </div>
+        </div>
+
+        {/* Fallback Close Button */}
         <button 
             onClick={leaveCall} 
             className="absolute top-4 right-4 z-50 btn btn-circle btn-sm btn-ghost bg-black/20 hover:bg-black/40 text-white border-none"
+            title="Force Close"
         >
             <X size={20} />
         </button>
@@ -259,7 +272,8 @@ const VideoCallModal = () => {
             {showConnecting && (
                 <div className="flex flex-col items-center gap-3 text-white/70">
                     <Loader2 className="size-12 animate-spin text-primary" />
-                    <p className="text-lg font-medium">Connecting secure channel...</p>
+                    <p className="text-lg font-medium">Establishing P2P Connection...</p>
+                    <p className="text-xs opacity-50">If this takes long, you may need TURN servers.</p>
                 </div>
             )}
 
@@ -292,9 +306,9 @@ const VideoCallModal = () => {
                 </div>
             )}
 
-            {/* 5. MY LOCAL VIDEO (PIP) - Z-index ensures it stays on top of remote video */}
+            {/* 5. MY LOCAL VIDEO (PIP) */}
             {myStream && (
-                <div className="absolute bottom-4 right-4 w-32 h-48 md:w-48 md:h-36 bg-zinc-900 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-30">
+                <div className="absolute bottom-24 right-4 w-32 h-48 md:w-48 md:h-36 bg-zinc-900 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-30">
                     <video 
                         playsInline 
                         muted 
@@ -311,7 +325,7 @@ const VideoCallModal = () => {
             )}
         </div>
 
-        {/* FOOTER CONTROLS - High Z-Index to ensure visibility */}
+        {/* FOOTER CONTROLS */}
         <div className="h-24 bg-base-300/80 backdrop-blur flex items-center justify-center gap-6 border-t border-base-content/10 z-50 relative">
             <button onClick={toggleMic} className={`btn btn-circle btn-lg ${micOn ? 'btn-ghost bg-base-100' : 'btn-error'}`}>
                 {micOn ? <Mic /> : <MicOff />}
