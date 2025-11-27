@@ -5,7 +5,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
     },
     fullName: {
       type: String,
@@ -20,9 +19,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    instanceId: {
+      type: String,
+      required: true,
+      default: "blackbox.main.org", // Default server
+      index: true,
+    }
   },
   { timestamps: true }
 );
+
+userSchema.index({ email: 1, instanceId: 1 }, { unique: true });
 
 const User = mongoose.model("User", userSchema);
 

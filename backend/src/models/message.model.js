@@ -10,7 +10,7 @@ const messageSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // Not required if it's a group message
+      required: false,
     },
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -22,6 +22,15 @@ const messageSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+    },
+    isEphemeral: {
+      type: Boolean,
+      default: false,
+    },
+    // NEW: Store the duration (in seconds)
+    ephemeralDuration: {
+      type: Number,
+      default: 5, 
     },
     deletedFor: [
       {

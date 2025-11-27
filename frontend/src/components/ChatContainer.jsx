@@ -6,7 +6,7 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { Users } from "lucide-react";
+import { Flame } from "lucide-react"; // Import Flame
 
 const ChatContainer = () => {
   const {
@@ -14,18 +14,17 @@ const ChatContainer = () => {
     getMessages,
     isMessagesLoading,
     selectedUser,
-    selectedGroup, // Add selectedGroup
+    selectedGroup, 
     subscribeToMessages,
     unsubscribeFromMessages,
     deleteMessage,
   } = useChatStore();
-  const { authUser } = useAuthStore();
+  const { authUser, socket } = useAuthStore();
   const messageListRef = useRef(null); 
   const messageEndRef = useRef(null); 
 
   const [showDeleteOptionsFor, setShowDeleteOptionsFor] = useState(null);
 
-  // Helper to get the current target ID
   const targetId = selectedUser?._id || selectedGroup?._id;
 
   useEffect(() => {
@@ -46,6 +45,22 @@ const ChatContainer = () => {
     const timer = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timer);
   }, [messages]); 
+
+  // --- NEW: EMIT VIEWED EVENT ---
+  useEffect(() => {
+      // Check if there are ephemeral messages from others that need burning
+      const hasEphemeral = messages.some(
+          m => m.isEphemeral && m.senderId !== authUser._id
+      );
+
+      if (hasEphemeral && socket && targetId) {
+          console.log("Viewing ephemeral messages...");
+          socket.emit("messagesViewed", { 
+              peerId: targetId, 
+              isGroup: !!selectedGroup 
+          });
+      }
+  }, [messages, targetId, selectedGroup, authUser._id, socket]);
 
 
   const handleShowDeleteOptions = (messageId, event) => {
@@ -91,12 +106,9 @@ const ChatContainer = () => {
     !(message.deletedFor && message.deletedFor.includes(authUser._id))
    );
 
-   // Helper to get avatar for a message sender
    const getSenderAvatar = (message) => {
        if (message.senderId === authUser._id) return authUser.profilePic || "/avatar.png";
-       // For direct chat
        if (selectedUser) return selectedUser.profilePic || "/avatar.png";
-       // For group chat, find member in group
        if (selectedGroup) {
            const member = selectedGroup.members.find(m => m._id === message.senderId);
            return member?.profilePic || "/avatar.png";
@@ -136,7 +148,6 @@ const ChatContainer = () => {
               </div>
             </div>
 
-             {/* Chat Bubble Header for Groups */}
              {selectedGroup && message.senderId !== authUser._id && (
                  <div className="chat-header mb-1 text-xs opacity-50">
                      {getSenderName(message)}
@@ -149,9 +160,17 @@ const ChatContainer = () => {
                         message.senderId === authUser._id
                          ? 'bg-primary text-primary-content'
                          : 'bg-base-100 text-base-content'
-                        } ${message.senderId === authUser._id ? 'cursor-pointer' : ''} shadow`} 
+                        } ${message.senderId === authUser._id ? 'cursor-pointer' : ''} shadow 
+                        ${message.isEphemeral ? 'border-2 border-orange-500' : ''}`} // Visual Cue
                     onClick={(e) => message.senderId === authUser._id && handleShowDeleteOptions(message._id, e)} 
                  >
+                    {message.isEphemeral && (
+                        <div className="flex items-center gap-1 text-xs text-orange-500 font-bold mb-1">
+                            <Flame size={12} fill="currentColor" />
+                            <span>Secret Message</span>
+                        </div>
+                    )}
+
                     {message.image && message.text !== "🚫 This message was deleted" && (
                         <img
                         src={message.image}

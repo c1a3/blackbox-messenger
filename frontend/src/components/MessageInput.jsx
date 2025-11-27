@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X, Clock, Calendar } from "lucide-react"; // Added Clock, Calendar
+import { Image, Send, X, Clock, Calendar, Flame, Smile } from "lucide-react"; // Added Smile
 import toast from "react-hot-toast";
+import EmojiPicker from "emoji-picker-react"; // Import Emoji Picker
 
 const MessageInput = () => {
   const [text, setText] = useState("");
@@ -9,31 +10,50 @@ const MessageInput = () => {
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
 
-  // +++ State for scheduling +++
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState("");
-  // ++++++++++++++++++++++++++++
+  
+  // Ephemeral States
+  const [isEphemeral, setIsEphemeral] = useState(false);
+  const [burnDuration, setBurnDuration] = useState(5);
+
+  // Emoji State
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef(null);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+            setShowEmojiPicker(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleEmojiClick = (emojiObject) => {
+      setText((prev) => prev + emojiObject.emoji);
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return; // Handle case where user cancels file selection
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
-     // Check file size (e.g., limit to 4MB)
-     const maxSizeInBytes = 4 * 1024 * 1024;
-     if (file.size > maxSizeInBytes) {
-         toast.error("Image file size should be less than 4MB");
-         return;
-     }
 
+    const maxSizeInBytes = 50 * 1024 * 1024; 
+    if (file.size > maxSizeInBytes) {
+        toast.error("Image file size too large (Max 50MB)");
+        return;
+    }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readDataAsDataURL(file);
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const removeImage = () => {
@@ -41,30 +61,18 @@ const MessageInput = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // --- Modified handleSendMessage ---
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
 
-    // Validate schedule time if set
     let sendTime = null;
     if (showScheduler && scheduleDateTime) {
-      
-      // *** FIX FOR BROWSER INCONSISTENCY ***
-      // new Date("YYYY-MM-DDTHH:mm") is ambiguous.
-      // We must first create a date object from the string, which Firefox
-      // correctly treats as local time, and *then* get its ISO string.
-      // But to be 100% safe, we parse the components.
-      
-      // A more robust way to parse the "datetime-local" string as local time
-      const parts = scheduleDateTime.split(/[-T:]/); // [YYYY, MM, DD, HH, mm]
-      // Note: Month is 0-indexed in JS Date, so subtract 1
+      const parts = scheduleDateTime.split(/[-T:]/); 
       const localDate = new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]);
       sendTime = localDate;
-      // *** END FIX ***
 
       if (isNaN(sendTime.getTime()) || sendTime <= new Date()) {
-        toast.error("Please select a valid future date and time for scheduling.");
+        toast.error("Please select a valid future date and time.");
         return;
       }
     }
@@ -73,38 +81,32 @@ const MessageInput = () => {
       const payload = {
         text: text.trim(),
         image: imagePreview,
+        isEphemeral: isEphemeral,
+        ephemeralDuration: parseInt(burnDuration),
       };
-      if (sendTime) {
-        payload.scheduledSendTime = sendTime.toISOString(); // Send unambiguous ISO string
-      }
+      
+      if (sendTime) payload.scheduledSendTime = sendTime.toISOString();
 
       await sendMessage(payload);
 
-        // Indicate scheduling success
-        if (sendTime) {
-             toast.success(`Message scheduled for ${sendTime.toLocaleString()}`);
-        }
+      if (sendTime) toast.success(`Message scheduled for ${sendTime.toLocaleString()}`);
 
-      // Clear form
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      // Reset scheduler
       setShowScheduler(false);
       setScheduleDateTime("");
+      setIsEphemeral(false); 
+      setShowEmojiPicker(false);
 
     } catch (error) {
-      console.error("Failed to send/schedule message:", error);
-      // Toast error is likely handled in the store action
+      console.error("Failed to send message:", error);
     }
   };
-  // --- End Modified handleSendMessage ---
 
-  // Get minimum datetime for scheduler input (now + 1 minute)
    const getMinDateTime = () => {
         const now = new Date();
-        now.setMinutes(now.getMinutes() + 1); // Set minimum time to 1 minute in the future
-        // Format for datetime-local input: YYYY-MM-DDTHH:mm
+        now.setMinutes(now.getMinutes() + 1); 
         const year = now.getFullYear();
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
         const day = now.getDate().toString().padStart(2, '0');
@@ -114,15 +116,22 @@ const MessageInput = () => {
    }
 
   return (
-    <div className="p-4 border-t border-base-300 bg-base-100"> {/* Added background */}
-      {/* Image Preview */}
+    <div className={`p-4 border-t border-base-300 relative transition-colors duration-300 ${isEphemeral ? "bg-orange-500/10" : "bg-base-100"}`}>
+      
+      {/* Emoji Picker Popup */}
+      {showEmojiPicker && (
+          <div ref={emojiPickerRef} className="absolute bottom-20 left-4 z-50 shadow-2xl">
+              <EmojiPicker onEmojiClick={handleEmojiClick} theme="auto" />
+          </div>
+      )}
+
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2">
           <div className="relative">
             <img
               src={imagePreview}
               alt="Preview"
-              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border border-base-content/20"
+              className="w-20 h-20 object-cover rounded-lg border border-base-content/20"
             />
             <button
               onClick={removeImage}
@@ -136,7 +145,6 @@ const MessageInput = () => {
         </div>
       )}
 
-       {/* Scheduler Input Area */}
         {showScheduler && (
             <div className="mb-3 p-3 bg-base-200 rounded-lg flex flex-col sm:flex-row items-center gap-2">
                 <label htmlFor="scheduleDateTime" className="text-sm font-medium flex items-center gap-1 shrink-0">
@@ -147,28 +155,32 @@ const MessageInput = () => {
                     id="scheduleDateTime"
                     value={scheduleDateTime}
                     onChange={(e) => setScheduleDateTime(e.target.value)}
-                    min={getMinDateTime()} // Prevent scheduling in the past
+                    min={getMinDateTime()} 
                     className="input input-bordered input-sm w-full sm:w-auto flex-grow"
-                    required // Make required if scheduler is shown
+                    required
                 />
-                 <button
-                    type="button"
-                    onClick={() => { setShowScheduler(false); setScheduleDateTime(""); }}
-                    className="btn btn-xs btn-ghost text-error"
-                 >
+                 <button type="button" onClick={() => { setShowScheduler(false); setScheduleDateTime(""); }} className="btn btn-xs btn-ghost text-error">
                     Cancel
                  </button>
             </div>
         )}
 
-      {/* Main Input Form */}
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        {/* Text Input and Image Button */}
-        <div className="flex-1 flex items-center gap-2 bg-base-200 rounded-lg px-2"> {/* Group input/buttons */}
+        <div className="flex-1 flex items-center gap-2 bg-base-200 rounded-lg px-2">
+          
+          {/* Emoji Button */}
+          <button
+            type="button"
+            className={`btn btn-ghost btn-sm btn-circle ${showEmojiPicker ? "text-primary" : "text-base-content/50"}`}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <Smile size={20} />
+          </button>
+
           <input
             type="text"
-            className="flex-1 input bg-transparent focus:outline-none input-sm sm:input-md py-2" // Adjusted styling
-            placeholder="Type a message..."
+            className="flex-1 input bg-transparent focus:outline-none input-sm sm:input-md py-2"
+            placeholder={isEphemeral ? `Self-destructs in ${burnDuration}s...` : "Type a message..."}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -179,11 +191,9 @@ const MessageInput = () => {
             ref={fileInputRef}
             onChange={handleImageChange}
           />
-
           <button
             type="button"
-            className={`btn btn-ghost btn-sm btn-circle
-                     ${imagePreview ? "text-primary" : "text-base-content/50"}`}
+            className={`btn btn-ghost btn-sm btn-circle ${imagePreview ? "text-primary" : "text-base-content/50"}`}
             onClick={() => fileInputRef.current?.click()}
             title="Attach image"
           >
@@ -191,7 +201,31 @@ const MessageInput = () => {
           </button>
         </div>
 
-          {/* Schedule Toggle Button */}
+         <div className="flex items-center bg-base-200 rounded-full">
+             <button
+                type="button"
+                className={`btn btn-ghost btn-sm btn-circle ${isEphemeral ? "text-orange-500" : "text-base-content/50"}`}
+                onClick={() => setIsEphemeral(!isEphemeral)}
+                title="Burn after reading"
+             >
+                <Flame size={18} className={isEphemeral ? "fill-orange-500" : ""} />
+             </button>
+             
+             {isEphemeral && (
+                 <select 
+                    value={burnDuration}
+                    onChange={(e) => setBurnDuration(e.target.value)}
+                    className="select select-ghost select-xs w-16 focus:outline-none text-orange-600 font-bold"
+                 >
+                     <option value={5}>5s</option>
+                     <option value={10}>10s</option>
+                     <option value={15}>15s</option>
+                     <option value={30}>30s</option>
+                     <option value={60}>60s</option>
+                 </select>
+             )}
+         </div>
+
          <button
             type="button"
             className={`btn btn-ghost btn-sm btn-circle ${showScheduler ? "text-primary bg-primary/10" : "text-base-content/50"}`}
@@ -201,14 +235,13 @@ const MessageInput = () => {
             <Clock size={18} />
          </button>
 
-        {/* Send Button */}
         <button
           type="submit"
-          className="btn btn-primary btn-sm btn-circle" // Consistent size
-          disabled={(!text.trim() && !imagePreview) || (showScheduler && !scheduleDateTime)} // Disable if scheduling but no time set
-          title={showScheduler ? "Schedule Send" : "Send"}
+          className={`btn btn-sm btn-circle ${isEphemeral ? "btn-warning" : "btn-primary"}`}
+          disabled={(!text.trim() && !imagePreview) || (showScheduler && !scheduleDateTime)}
+          title={showScheduler ? "Schedule Send" : isEphemeral ? `Send Secret` : "Send"}
         >
-          <Send size={18} /> {/* Consistent size */}
+          <Send size={18} />
         </button>
       </form>
     </div>

@@ -8,6 +8,7 @@ import {
   Mail,
   MessageSquare,
   User,
+  Globe, // Import Globe Icon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -20,6 +21,7 @@ const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
+    instanceId: "", // New State
   });
 
   const { signup, isSigningUp } = useAuthStore();
@@ -38,9 +40,7 @@ const SignUpPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     const success = validateForm();
-
     if (success === true) signup(formData);
   };
 
@@ -66,6 +66,28 @@ const SignUpPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* SERVER ID INPUT */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Server Address (Optional)</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Globe className="size-5 text-base-content/40" />
+                </div>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full pl-10`}
+                  placeholder="blackbox.main.org (Default)"
+                  value={formData.instanceId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, instanceId: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Full Name</span>
@@ -163,8 +185,6 @@ const SignUpPage = () => {
           </div>
         </div>
       </div>
-
-      {/* right side */}
 
       <AuthImagePattern
         title="Join our community"

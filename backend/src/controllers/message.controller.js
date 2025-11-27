@@ -1,20 +1,18 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
-import Group from "../models/group.model.js"; // Import Group
+import Group from "../models/group.model.js"; 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import schedule from 'node-schedule';
 import moment from 'moment-timezone';
 
+// ... [Keep deliverMessage function as is] ...
 const deliverMessage = async (message) => {
     try {
         if (message.groupId) {
-            // Handle group message delivery
             const group = await Group.findById(message.groupId);
             if (group) {
                 group.members.forEach((memberId) => {
-                    // FIX: Removed the check that skipped the sender. 
-                    // The sender needs this event for scheduled messages to appear.
                     const socketId = getReceiverSocketId(memberId.toString());
                     if (socketId) {
                         io.to(socketId).emit("newMessage", message);
@@ -22,7 +20,6 @@ const deliverMessage = async (message) => {
                 });
             }
         } else {
-            // Handle direct message delivery
             const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
             if (receiverSocketId) {
                 io.to(receiverSocketId).emit("newMessage", message);
@@ -41,7 +38,14 @@ const deliverMessage = async (message) => {
 export const getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
-        const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+        const currentInstanceId = req.user.instanceId; // Get user's server ID
+
+        // FILTER: Only fetch users from the SAME instance
+        const filteredUsers = await User.find({ 
+            _id: { $ne: loggedInUserId },
+            instanceId: currentInstanceId 
+        }).select("-password");
+
         res.status(200).json(filteredUsers);
       } catch (error) {
         console.error("Error in getUsersForSidebar: ", error.message);
@@ -49,12 +53,13 @@ export const getUsersForSidebar = async (req, res) => {
       }
 };
 
+// ... [Keep getMessages, sendMessage, deleteMessage, schedulePendingMessages exactly as they were] ...
+// (I am omitting them to save space, but DO NOT DELETE THEM from your file)
 export const getMessages = async (req, res) => {
     try {
         const { id: userToChatId } = req.params;
         const myId = req.user._id;
 
-        // Check if it's a group message request by checking if 'id' exists in Group collection
         const isGroup = await Group.exists({ _id: userToChatId });
 
         let messages;
@@ -82,7 +87,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, scheduledSendTime, isGroup } = req.body; 
+    const { text, image, scheduledSendTime, isGroup, isEphemeral, ephemeralDuration } = req.body; 
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -117,10 +122,12 @@ export const sendMessage = async (req, res) => {
         isScheduled: !!scheduleDateUTC,
         scheduledSendTime: scheduleDateUTC,
         isSent: !scheduleDateUTC,
+        isEphemeral: !!isEphemeral, 
+        ephemeralDuration: ephemeralDuration || 5, 
     };
 
     if (isGroup) {
-        messageData.groupId = receiverId; // receiverId param is actually groupId here
+        messageData.groupId = receiverId; 
     } else {
         messageData.receiverId = receiverId;
     }
@@ -203,7 +210,6 @@ export const deleteMessage = async (req, res) => {
           return res.status(400).json({ error: "Invalid delete type" });
         }
 
-        // Logic to determine who receives the delete event
         const deletionInfo = {
            messageId: message._id,
            deleteType: deleteType,

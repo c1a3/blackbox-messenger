@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { X, Users, Info } from "lucide-react";
+import { X, Users, Info, Video } from "lucide-react"; // Added Video icon
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { useCallStore } from "../store/useCallStore"; // Import Call Store
 import GroupInfoModal from "./GroupInfoModal";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser, selectedGroup, setSelectedGroup } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const { setIsCallModalOpen } = useCallStore(); // Use Call Store
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
 
   const handleClose = () => {
@@ -49,6 +51,17 @@ const ChatHeader = () => {
         </div>
 
         <div className="flex items-center gap-2">
+             {/* Video Call Button - Only for 1-on-1 chats */}
+             {selectedUser && (
+                 <button 
+                    onClick={() => setIsCallModalOpen(true)} 
+                    className="btn btn-ghost btn-sm btn-circle"
+                    title="Video Call"
+                 >
+                     <Video className="size-5" />
+                 </button>
+             )}
+
              {selectedGroup && (
                  <button onClick={() => setIsGroupInfoOpen(true)} className="btn btn-ghost btn-sm btn-circle" title="Group Info">
                      <Info className="size-5" />

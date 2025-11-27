@@ -4,7 +4,12 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  // Capture instanceId from the request body (or default)
+  const { fullName, email, password, instanceId } = req.body;
+  
+  // Normalize instance ID (default to main if empty)
+  const serverId = instanceId || "blackbox.main.org";
+
   try {
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -14,9 +19,10 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    const user = await User.findOne({ email });
+    // Check if user exists ON THIS SPECIFIC SERVER
+    const user = await User.findOne({ email, instanceId: serverId });
 
-    if (user) return res.status(400).json({ message: "Email already exists" });
+    if (user) return res.status(400).json({ message: "Email already exists on this server" });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -25,10 +31,10 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      instanceId: serverId, // Save the server ID
     });
 
     if (newUser) {
-      // generate jwt token here
       generateToken(newUser._id, res);
       await newUser.save();
 
@@ -37,6 +43,7 @@ export const signup = async (req, res) => {
         fullName: newUser.fullName,
         email: newUser.email,
         profilePic: newUser.profilePic,
+        instanceId: newUser.instanceId,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
@@ -48,12 +55,15 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, instanceId } = req.body;
+  const serverId = instanceId || "blackbox.main.org";
+
   try {
-    const user = await User.findOne({ email });
+    // Find user on the SPECIFIC server
+    const user = await User.findOne({ email, instanceId: serverId });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials (User not found on this server)" });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
@@ -68,6 +78,7 @@ export const login = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic,
+      instanceId: user.instanceId,
     });
   } catch (error) {
     console.log("Error in login controller", error.message);

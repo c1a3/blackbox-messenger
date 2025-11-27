@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { Camera, Mail, User, Globe } from "lucide-react"; // Added Globe icon
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -98,6 +98,15 @@ const ProfilePage = () => {
                 <span>Member Since</span>
                 <span>{authUser.createdAt?.split("T")[0]}</span>
               </div>
+              
+              {/* NEW: Server Instance Info */}
+              <div className="flex items-center justify-between py-2 border-b border-zinc-700">
+                <span className="flex items-center gap-2"><Globe className="size-4"/> Server Instance</span>
+                <span className="font-mono bg-base-100 px-2 py-0.5 rounded text-xs">
+                    {authUser?.instanceId || "blackbox.main.org"}
+                </span>
+              </div>
+
               <div className="flex items-center justify-between py-2">
                 <span>Account Status</span>
                 <span className="text-green-500">Active</span>

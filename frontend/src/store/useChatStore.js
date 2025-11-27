@@ -7,7 +7,7 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
   selectedUser: null,
-  selectedGroup: null, // New state for group
+  selectedGroup: null, 
   isUsersLoading: false,
   isMessagesLoading: false,
 
@@ -44,7 +44,6 @@ export const useChatStore = create((set, get) => ({
     if (!selectedUser && !selectedGroup) return toast.error("No chat selected");
 
     const targetId = selectedGroup ? selectedGroup._id : selectedUser._id;
-    // Add isGroup flag if a group is selected
     const payload = { ...messageData, isGroup: !!selectedGroup };
 
     try {
@@ -99,6 +98,7 @@ export const useChatStore = create((set, get) => ({
 
     socket.off("newMessage");
     socket.off("messageDeleted");
+    socket.off("messageBurned");
 
     socket.on("newMessage", (newMessage) => {
        const { selectedUser, selectedGroup, messages } = get();
@@ -109,13 +109,10 @@ export const useChatStore = create((set, get) => ({
             let isRelevantToSelectedChat = false;
 
             if (selectedGroup) {
-                // Check if message belongs to this group
                 if (newMessage.groupId === selectedGroup._id) {
                     isRelevantToSelectedChat = true;
                 }
             } else if (selectedUser) {
-                // Check if message is a direct message with this user
-                // (and NOT a group message, i.e., groupId is undefined or null)
                 if (!newMessage.groupId && 
                    ((newMessage.senderId === currentAuthUserId && newMessage.receiverId === selectedUser._id) ||
                     (newMessage.receiverId === currentAuthUserId && newMessage.senderId === selectedUser._id))) {
@@ -138,7 +135,6 @@ export const useChatStore = create((set, get) => ({
       const currentAuthUserId = useAuthStore.getState().authUser._id;
       const { selectedUser, selectedGroup } = get();
 
-      // Check if the deletion event is relevant to the current open chat
       let isRelevant = false;
       if (selectedGroup && groupId === selectedGroup._id) {
           isRelevant = true;
@@ -153,7 +149,6 @@ export const useChatStore = create((set, get) => ({
                 if (deleteType === "everyone") {
                     return { ...msg, text: updatedText, image: null, deletedFor: [] };
                 } else if (deleteType === "me") {
-                    // Note: For 'me' deletion in groups, logic is same: append current user to deletedFor
                     const userToDeleteFor = currentAuthUserId; 
                     const deletedForArray = msg.deletedFor ? [...msg.deletedFor] : [];
                     if (!deletedForArray.includes(userToDeleteFor)) {
@@ -167,6 +162,13 @@ export const useChatStore = create((set, get) => ({
         }));
       }
     });
+
+    // NEW: Handle Hard Delete (Burn)
+    socket.on("messageBurned", ({ messageId }) => {
+        set((state) => ({
+            messages: state.messages.filter((msg) => msg._id !== messageId)
+        }));
+    });
   },
 
   unsubscribeFromMessages: () => {
@@ -174,11 +176,12 @@ export const useChatStore = create((set, get) => ({
     if (socket) {
         socket.off("newMessage");
         socket.off("messageDeleted");
+        socket.off("messageBurned");
     }
   },
 
   setSelectedUser: (selectedUser) => {
-      set({ selectedUser, selectedGroup: null }); // Clear group if user selected
+      set({ selectedUser, selectedGroup: null }); 
       if (selectedUser) {
           get().getMessages(selectedUser._id);
           get().subscribeToMessages();
@@ -189,7 +192,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   setSelectedGroup: (selectedGroup) => {
-      set({ selectedGroup, selectedUser: null }); // Clear user if group selected
+      set({ selectedGroup, selectedUser: null });
       if (selectedGroup) {
           get().getMessages(selectedGroup._id);
           get().subscribeToMessages();

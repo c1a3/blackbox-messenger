@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOut, MessageSquare, Settings, User, CheckSquare } from "lucide-react";
+import { LogOut, MessageSquare, Settings, User, CheckSquare, Globe } from "lucide-react"; // Added Globe
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
@@ -26,6 +26,17 @@ const Navbar = () => {
           </div>
 
            <div className="flex items-center gap-2">
+            
+            {/* NEW: Server Indicator Badge */}
+            {authUser && (
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-base-200/50 rounded-full text-xs font-medium border border-base-200 mr-2" title="Connected Server">
+                    <Globe className="size-3.5 text-primary" />
+                    <span className="opacity-70 truncate max-w-[150px]">
+                        {authUser.instanceId || "blackbox.main.org"}
+                    </span>
+                </div>
+            )}
+
             <Link
               to={"/settings"}
               className={`
