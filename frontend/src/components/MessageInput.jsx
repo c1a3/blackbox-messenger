@@ -1,14 +1,18 @@
 import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X, Clock, Calendar, Flame, Smile } from "lucide-react"; // Added Smile
+import { Image, Send, X, Clock, Calendar, Flame, Smile, CheckSquare } from "lucide-react"; // Added CheckSquare
 import toast from "react-hot-toast";
-import EmojiPicker from "emoji-picker-react"; // Import Emoji Picker
+import EmojiPicker from "emoji-picker-react";
+import { useSharedTaskStore } from "../store/useSharedTaskStore"; // Import Shared Task Store
 
 const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
+  
+  // Task Store
+  const { togglePanel, isPanelOpen } = useSharedTaskStore();
 
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState("");
@@ -21,7 +25,6 @@ const MessageInput = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef(null);
 
-  // Close emoji picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
         if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
@@ -118,7 +121,6 @@ const MessageInput = () => {
   return (
     <div className={`p-4 border-t border-base-300 relative transition-colors duration-300 ${isEphemeral ? "bg-orange-500/10" : "bg-base-100"}`}>
       
-      {/* Emoji Picker Popup */}
       {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-20 left-4 z-50 shadow-2xl">
               <EmojiPicker onEmojiClick={handleEmojiClick} theme="auto" />
@@ -168,11 +170,22 @@ const MessageInput = () => {
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-2 bg-base-200 rounded-lg px-2">
           
+          {/* Tasks Toggle Button */}
+          <button
+            type="button"
+            className={`btn btn-ghost btn-sm btn-circle ${isPanelOpen ? "text-primary bg-primary/10" : "text-base-content/50"}`}
+            onClick={togglePanel}
+            title="Shared Tasks"
+          >
+            <CheckSquare size={20} />
+          </button>
+
           {/* Emoji Button */}
           <button
             type="button"
             className={`btn btn-ghost btn-sm btn-circle ${showEmojiPicker ? "text-primary" : "text-base-content/50"}`}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            title="Emoji"
           >
             <Smile size={20} />
           </button>

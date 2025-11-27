@@ -5,8 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/bbox2.ico"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BlackBox Messenger</title>
-    <script type="module" crossorigin src="/assets/index-CMPRV5Dy.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C8_ynZw4.css">
+    <script>
+      // Manual polyfill for global before any script loads
+      window.global = window;
+    </script>
+    <script type="module" crossorigin src="/assets/index-BFzA8_BY.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-TsIUIq2O.css">
   </head>
   <body>
     <div id="root"></div>
