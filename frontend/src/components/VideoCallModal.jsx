@@ -6,8 +6,6 @@ import { useChatStore } from "../store/useChatStore";
 import { Video, VideoOff, Mic, MicOff, PhoneOff, Phone, Loader2, X, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
-// --- ICE SERVERS CONFIGURATION ---
-// Ensure these match your credentials from Metered.ca or another TURN provider.
 const ICE_SERVERS = [
       {
         urls: "stun:stun.relay.metered.ca:80",
