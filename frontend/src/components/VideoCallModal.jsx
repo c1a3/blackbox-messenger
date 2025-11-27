@@ -6,8 +6,10 @@ import { useChatStore } from "../store/useChatStore";
 import { Video, VideoOff, Mic, MicOff, PhoneOff, Phone, Loader2, X, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
+// --- ICE SERVERS CONFIGURATION ---
+// Ensure these match your credentials from Metered.ca or another TURN provider.
 const ICE_SERVERS = [
-    {
+      {
         urls: "stun:stun.relay.metered.ca:80",
       },
       {
@@ -30,7 +32,7 @@ const ICE_SERVERS = [
         username: "ad2772a38233e61c18850336",
         credential: "iKQxbUcUcfIVctHC",
       },
-];
+  ];
 
 const VideoCallModal = () => {
   const { 
@@ -125,7 +127,7 @@ const VideoCallModal = () => {
       try {
           const peer = new Peer({
             initiator: true,
-            trickle: false, // Keep false for simple-peer stability
+            trickle: false,
             stream: myStream,
             config: { iceServers: ICE_SERVERS }
           });
@@ -250,7 +252,7 @@ const VideoCallModal = () => {
 
   const retryCall = () => {
       window.location.reload();
-  }
+  };
 
   if (!isCallModalOpen) return null;
 
@@ -338,4 +340,56 @@ const VideoCallModal = () => {
                     </div>
                     <h3 className="text-3xl font-bold text-white mb-2">{selectedUser?.fullName}</h3>
                     <p className="text-white/60 flex items-center justify-center gap-2">
-                        {
+                        {isInitializing ? "Accessing Camera..." : "Calling..."}
+                        {isInitializing && <Loader2 className="size-4 animate-spin" />}
+                    </p>
+                </div>
+            )}
+
+            {/* 6. MY LOCAL VIDEO (PIP) */}
+            {myStream && (
+                <div className="absolute bottom-24 right-4 w-32 h-48 md:w-48 md:h-36 bg-zinc-900 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-30">
+                    <video 
+                        playsInline 
+                        muted 
+                        ref={myVideo} 
+                        autoPlay 
+                        className={`w-full h-full object-cover ${!cameraOn ? 'hidden' : ''} transform scale-x-[-1]`} 
+                    />
+                    {!cameraOn && (
+                        <div className="w-full h-full flex items-center justify-center text-white/50 bg-zinc-800">
+                            <VideoOff className="size-8" />
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+
+        {/* FOOTER CONTROLS */}
+        <div className="h-24 bg-base-300/80 backdrop-blur flex items-center justify-center gap-6 border-t border-base-content/10 z-50 relative">
+            <button onClick={toggleMic} className={`btn btn-circle btn-lg ${micOn ? 'btn-ghost bg-base-100' : 'btn-error'}`}>
+                {micOn ? <Mic /> : <MicOff />}
+            </button>
+            
+            <button onClick={toggleCamera} className={`btn btn-circle btn-lg ${cameraOn ? 'btn-ghost bg-base-100' : 'btn-error'}`}>
+                {cameraOn ? <Video /> : <VideoOff />}
+            </button>
+
+            {/* ANSWER BUTTON */}
+            {isReceivingCall && !callAccepted && (
+                <button onClick={handleAnswerCall} className="btn btn-circle btn-lg btn-success shadow-lg hover:scale-110 transition-transform">
+                    <Phone className="size-8" />
+                </button>
+            )}
+
+            {/* HANG UP BUTTON */}
+            <button onClick={leaveCall} className="btn btn-circle btn-lg btn-error shadow-lg hover:scale-110 transition-transform">
+                <PhoneOff className="size-8" />
+            </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VideoCallModal;
