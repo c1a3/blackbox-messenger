@@ -3,17 +3,33 @@ import Peer from "simple-peer";
 import { useAuthStore } from "../store/useAuthStore";
 import { useCallStore } from "../store/useCallStore";
 import { useChatStore } from "../store/useChatStore";
-import { Video, VideoOff, Mic, MicOff, PhoneOff, Phone, Loader2, X } from "lucide-react";
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Phone, Loader2, X, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
-// --- CRITICAL: ICE SERVERS FOR DEPLOYMENT ---
-// STUN works for some, but TURN is needed for most real-world connections.
-// 1. Go to https://www.metered.ca/tools/openrelay/ (or similar free TURN provider)
-// 2. Create a free account and get your TURN credentials.
-// 3. Replace this array with the one they provide.
 const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' }
+    {
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "ad2772a38233e61c18850336",
+        credential: "iKQxbUcUcfIVctHC",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80?transport=tcp",
+        username: "ad2772a38233e61c18850336",
+        credential: "iKQxbUcUcfIVctHC",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "ad2772a38233e61c18850336",
+        credential: "iKQxbUcUcfIVctHC",
+      },
+      {
+        urls: "turns:global.relay.metered.ca:443?transport=tcp",
+        username: "ad2772a38233e61c18850336",
+        credential: "iKQxbUcUcfIVctHC",
+      },
 ];
 
 const VideoCallModal = () => {
@@ -109,7 +125,7 @@ const VideoCallModal = () => {
       try {
           const peer = new Peer({
             initiator: true,
-            trickle: false, // Keep false for simplicity unless you implement full trickle logic
+            trickle: false, // Keep false for simple-peer stability
             stream: myStream,
             config: { iceServers: ICE_SERVERS }
           });
@@ -130,9 +146,15 @@ const VideoCallModal = () => {
             setConnectionStatus("connected");
           });
 
+          peer.on("connect", () => {
+             console.log("Peer Connection Established");
+             setConnectionStatus("connected");
+          });
+
           peer.on("error", (err) => {
               console.error("Peer Error (Caller):", err);
-              toast.error(`Call Error: ${err.message || "Connection Failed"}`);
+              setConnectionStatus("failed");
+              toast.error("Call failed. Check network or firewall.");
           });
 
           socket.on("callAccepted", (signal) => {
@@ -145,6 +167,7 @@ const VideoCallModal = () => {
           connectionRef.current = peer;
       } catch (err) {
           console.error("Simple Peer Crash:", err);
+          setConnectionStatus("failed");
       }
     }
   }, [isCallModalOpen, isReceivingCall, myStream, selectedUser, callAccepted]);
@@ -177,9 +200,15 @@ const VideoCallModal = () => {
           setConnectionStatus("connected");
         });
 
+        peer.on("connect", () => {
+            console.log("Peer Connection Established (Receiver)");
+            setConnectionStatus("connected");
+         });
+
         peer.on("error", (err) => {
              console.error("Peer Error (Receiver):", err);
-             toast.error(`Call Error: ${err.message || "Connection Failed"}`);
+             setConnectionStatus("failed");
+             toast.error("Connection failed. Check network.");
         });
 
         peer.signal(callerSignal);
@@ -191,21 +220,11 @@ const VideoCallModal = () => {
 
   // 7. End Call
   const leaveCall = () => {
-    // 1. Capture ID BEFORE clearing state
     const targetId = callerId || selectedUser?._id;
-    
-    console.log("Ending call. Notifying:", targetId);
-
-    if(targetId) {
-        socket.emit("endCall", { to: targetId });
-    }
+    if(targetId) socket.emit("endCall", { to: targetId });
 
     if (connectionRef.current) connectionRef.current.destroy();
-    
-    // 2. Clear State
     endCallState();
-    
-    // 3. Hard Reset to clear all WebRTC tracks/buffers
     window.location.reload(); 
   };
 
@@ -229,10 +248,15 @@ const VideoCallModal = () => {
     }
   };
 
+  const retryCall = () => {
+      window.location.reload();
+  }
+
   if (!isCallModalOpen) return null;
 
   const showRemoteVideo = callAccepted && remoteStream && connectionStatus === "connected";
   const showConnecting = callAccepted && (!remoteStream || connectionStatus === "connecting");
+  const showFailed = connectionStatus === "failed";
   const showIncomingUI = !callAccepted && isReceivingCall;
   const showCallingUI = !callAccepted && !isReceivingCall;
 
@@ -240,18 +264,16 @@ const VideoCallModal = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
       <div className="bg-base-300 w-full max-w-4xl h-[80vh] md:h-auto md:aspect-video rounded-2xl overflow-hidden flex flex-col shadow-2xl relative border border-base-content/10">
         
-        {/* Top Bar with Status */}
+        {/* Status Badge */}
         <div className="absolute top-4 left-4 z-50 flex gap-2">
-            <div className={`badge ${connectionStatus === 'connected' ? 'badge-success' : 'badge-warning'} gap-2`}>
-                {connectionStatus === 'connected' ? 'Secured' : 'Connecting...'}
+            <div className={`badge ${connectionStatus === 'connected' ? 'badge-success' : connectionStatus === 'failed' ? 'badge-error' : 'badge-warning'} gap-2`}>
+                {connectionStatus === 'connected' ? 'Secured' : connectionStatus === 'failed' ? 'Failed' : 'Connecting...'}
             </div>
         </div>
 
-        {/* Fallback Close Button */}
         <button 
             onClick={leaveCall} 
             className="absolute top-4 right-4 z-50 btn btn-circle btn-sm btn-ghost bg-black/20 hover:bg-black/40 text-white border-none"
-            title="Force Close"
         >
             <X size={20} />
         </button>
@@ -269,15 +291,31 @@ const VideoCallModal = () => {
             )}
 
             {/* 2. CONNECTING STATE */}
-            {showConnecting && (
+            {showConnecting && !showFailed && (
                 <div className="flex flex-col items-center gap-3 text-white/70">
                     <Loader2 className="size-12 animate-spin text-primary" />
                     <p className="text-lg font-medium">Establishing P2P Connection...</p>
-                    <p className="text-xs opacity-50">If this takes long, you may need TURN servers.</p>
+                    <p className="text-xs opacity-50">Handshaking with TURN servers...</p>
                 </div>
             )}
 
-            {/* 3. INCOMING CALL UI */}
+            {/* 3. FAILED STATE */}
+            {showFailed && (
+                 <div className="flex flex-col items-center gap-4 text-white">
+                    <div className="size-16 rounded-full bg-error/20 flex items-center justify-center text-error mb-2">
+                        <PhoneOff size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold">Connection Failed</h3>
+                    <p className="text-white/60 max-w-xs text-center">
+                        The connection was blocked. This usually happens on strict networks (School/Office) or if TURN credentials are invalid.
+                    </p>
+                    <button onClick={retryCall} className="btn btn-outline text-white gap-2">
+                        <RefreshCw size={16} /> Retry
+                    </button>
+                </div>
+            )}
+
+            {/* 4. INCOMING CALL UI */}
             {showIncomingUI && (
                 <div className="text-center z-20">
                     <div className="avatar mb-6">
@@ -290,7 +328,7 @@ const VideoCallModal = () => {
                 </div>
             )}
 
-            {/* 4. OUTGOING CALL UI */}
+            {/* 5. OUTGOING CALL UI */}
             {showCallingUI && (
                 <div className="text-center z-20">
                     <div className="avatar mb-6">
@@ -300,56 +338,4 @@ const VideoCallModal = () => {
                     </div>
                     <h3 className="text-3xl font-bold text-white mb-2">{selectedUser?.fullName}</h3>
                     <p className="text-white/60 flex items-center justify-center gap-2">
-                        {isInitializing ? "Accessing Camera..." : "Calling..."}
-                        {isInitializing && <Loader2 className="size-4 animate-spin" />}
-                    </p>
-                </div>
-            )}
-
-            {/* 5. MY LOCAL VIDEO (PIP) */}
-            {myStream && (
-                <div className="absolute bottom-24 right-4 w-32 h-48 md:w-48 md:h-36 bg-zinc-900 rounded-xl overflow-hidden shadow-2xl border border-white/20 z-30">
-                    <video 
-                        playsInline 
-                        muted 
-                        ref={myVideo} 
-                        autoPlay 
-                        className={`w-full h-full object-cover ${!cameraOn ? 'hidden' : ''} transform scale-x-[-1]`} 
-                    />
-                    {!cameraOn && (
-                        <div className="w-full h-full flex items-center justify-center text-white/50 bg-zinc-800">
-                            <VideoOff className="size-8" />
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-
-        {/* FOOTER CONTROLS */}
-        <div className="h-24 bg-base-300/80 backdrop-blur flex items-center justify-center gap-6 border-t border-base-content/10 z-50 relative">
-            <button onClick={toggleMic} className={`btn btn-circle btn-lg ${micOn ? 'btn-ghost bg-base-100' : 'btn-error'}`}>
-                {micOn ? <Mic /> : <MicOff />}
-            </button>
-            
-            <button onClick={toggleCamera} className={`btn btn-circle btn-lg ${cameraOn ? 'btn-ghost bg-base-100' : 'btn-error'}`}>
-                {cameraOn ? <Video /> : <VideoOff />}
-            </button>
-
-            {/* ANSWER BUTTON */}
-            {isReceivingCall && !callAccepted && (
-                <button onClick={handleAnswerCall} className="btn btn-circle btn-lg btn-success shadow-lg hover:scale-110 transition-transform">
-                    <Phone className="size-8" />
-                </button>
-            )}
-
-            {/* HANG UP BUTTON */}
-            <button onClick={leaveCall} className="btn btn-circle btn-lg btn-error shadow-lg hover:scale-110 transition-transform">
-                <PhoneOff className="size-8" />
-            </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default VideoCallModal;
+                        {
